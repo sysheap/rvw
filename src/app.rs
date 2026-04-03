@@ -96,15 +96,6 @@ impl App {
         self.review_state.mark_reviewed(path);
     }
 
-    pub fn annotation_count(&self, path: &str) -> usize {
-        let full_path = self.repo_info.repo_path.join(path);
-        if let Ok(content) = std::fs::read_to_string(&full_path) {
-            crate::languages::count_annotations_in_content(&content, &full_path)
-        } else {
-            0
-        }
-    }
-
     pub fn reviewed_count(&self) -> usize {
         self.repo_info
             .files

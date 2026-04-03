@@ -4,11 +4,11 @@ A terminal code review tool for reviewing agent-produced code on git branches.
 
 ## The Problem
 
-Coding agents produce code on feature branches, often across multiple commits. Reviewing this with `git diff` is limiting — you can't see full file context, use LSP to navigate the codebase, or leave structured annotations for the agent to fix.
+Coding agents produce code on feature branches, often across multiple commits. Reviewing this with `git diff` is limiting — you can't see full file context and you can't use LSP to navigate the codebase.
 
 ## What rvw Does
 
-`rvw` gives you a TUI that shows all files changed between your current branch and main. Select a file and it opens in your editor at the first changed line. An integrated LSP server marks changed regions so you can jump between them with `]d`/`[d` and hover to see what the code looked like before. Add `// REVIEW: fix this` comments inline — the agent reads them directly from the source.
+`rvw` gives you a TUI that shows all files changed between your current branch and main. Select a file and it opens in your editor at the first changed line. An integrated LSP server marks changed regions so you can jump between them with `]d`/`[d` and hover to see what the code looked like before.
 
 Review state is tracked across sessions. You see which files you've already looked at and which still need attention.
 
@@ -49,14 +49,6 @@ rvw --repo /path/to/repo
 |-----|--------|
 | `]d`/`[d` | Jump to next/previous change |
 | Hover | See old code from base branch |
-
-Add review annotations as comments:
-
-```rust
-// REVIEW: this error case is not handled
-```
-
-The annotation format is language-aware (`#` for Python, `--` for Lua, `<!--` for HTML, etc.).
 
 ## Installation
 

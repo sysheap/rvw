@@ -33,12 +33,9 @@ The binary dispatches in `main.rs` via clap: no subcommand runs the TUI (`app::r
 
 ### Key shared modules
 - **`git.rs`** — All git operations via `git2`: merge-base detection, tree-to-tree diff, per-file hunk extraction. Both TUI (for file list) and LSP (for diagnostics/hover) use this.
-- **`languages.rs`** — Maps file extensions to language name, comment syntax (for `REVIEW:` annotation detection), and default LSP server names (for helix config generation).
+- **`languages.rs`** — Maps file extensions to language name and default LSP server names (for helix config generation).
 - **`review.rs`** — Persists review state to `~/.local/share/rvw/<repo-hash>-<branch>.json`. Keyed by SHA256 of repo path + branch name.
 
 ### Helix config integration (`editor.rs`)
 `HelixConfig` manages `.helix/languages.toml` lifecycle: backs up existing config, parses it as TOML, appends the `rvw` language server to each language's server list (preserving existing servers), restores backup on exit. A `ctrlc` handler ensures cleanup on Ctrl+C. Stale backups from crashed sessions are auto-restored on next startup.
 
-## Annotations
-
-Users add inline review comments using language-appropriate syntax (e.g., `// REVIEW: message` for Rust). These are detected by `languages::count_annotations_in_content` and shown as counts in the TUI. No export or strip — annotations stay in-tree for the agent to address.

@@ -113,13 +113,6 @@ fn render_file_list(f: &mut Frame, app: &App, area: Rect) {
             } else {
                 " "
             };
-            let annotation_count = app.annotation_count(&file.path);
-            let annotations = if annotation_count > 0 {
-                format!("  {} annotations", annotation_count)
-            } else {
-                String::new()
-            };
-
             let display_path = if let Some(ref old) = file.old_path {
                 format!("{} → {}", old, file.path)
             } else {
@@ -143,12 +136,11 @@ fn render_file_list(f: &mut Frame, app: &App, area: Rect) {
             };
 
             let line = format!(
-                "  [{}] {:40} {}  {:>10}{}",
+                "  [{}] {:40} {}  {:>10}",
                 reviewed,
                 display_path,
                 file.status.label(),
                 stats,
-                annotations,
             );
 
             let style = if app.review_state.is_reviewed(&file.path) {
