@@ -101,8 +101,8 @@ fn state_file_path(repo_path: &Path, branch: &str) -> Result<PathBuf> {
 
     let mut hasher = Sha256::new();
     hasher.update(repo_path.to_string_lossy().as_bytes());
-    let hash = format!("{:.12x}", hasher.finalize());
-    let hash = &hash[..12];
+    let digest = hasher.finalize();
+    let hash: String = digest.iter().take(6).map(|b| format!("{:02x}", b)).collect();
 
     // Sanitize branch name for filename
     let safe_branch: String = branch
