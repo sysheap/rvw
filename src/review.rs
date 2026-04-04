@@ -33,8 +33,8 @@ impl ReviewState {
         let state_path = state_file_path(repo_path, branch)?;
 
         if state_path.exists() {
-            let content = std::fs::read_to_string(&state_path)
-                .context("Failed to read review state")?;
+            let content =
+                std::fs::read_to_string(&state_path).context("Failed to read review state")?;
             let mut state: ReviewState =
                 serde_json::from_str(&content).context("Failed to parse review state")?;
             state.state_path = state_path;
@@ -102,12 +102,22 @@ fn state_file_path(repo_path: &Path, branch: &str) -> Result<PathBuf> {
     let mut hasher = Sha256::new();
     hasher.update(repo_path.to_string_lossy().as_bytes());
     let digest = hasher.finalize();
-    let hash: String = digest.iter().take(6).map(|b| format!("{:02x}", b)).collect();
+    let hash: String = digest
+        .iter()
+        .take(6)
+        .map(|b| format!("{:02x}", b))
+        .collect();
 
     // Sanitize branch name for filename
     let safe_branch: String = branch
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
 
     let filename = format!("{}-{}.json", hash, safe_branch);

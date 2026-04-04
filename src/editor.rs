@@ -44,8 +44,7 @@ pub fn open_editor(editor_cmd: &str, repo_path: &Path, file_path: &str, line: u3
         }
     };
 
-    status
-        .with_context(|| format!("Failed to launch editor '{}'", editor_cmd))?;
+    status.with_context(|| format!("Failed to launch editor '{}'", editor_cmd))?;
 
     Ok(())
 }
@@ -162,8 +161,7 @@ impl HelixConfig {
     }
 
     fn generate_config(&self) -> Result<String> {
-        let rvw_binary = std::env::current_exe()
-            .unwrap_or_else(|_| PathBuf::from("rvw"));
+        let rvw_binary = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("rvw"));
         let rvw_binary_str = rvw_binary.to_string_lossy();
 
         // Read existing config from backup if we just backed it up,
@@ -246,28 +244,19 @@ impl HelixConfig {
                         .map(|s| toml::Value::String(s.to_string()))
                         .collect();
                     servers.push(toml::Value::String("rvw".to_string()));
-                    entry_table.insert(
-                        "language-servers".to_string(),
-                        toml::Value::Array(servers),
-                    );
+                    entry_table.insert("language-servers".to_string(), toml::Value::Array(servers));
                 }
             } else {
                 // Create new language entry
                 let mut lang_table = toml::map::Map::new();
-                lang_table.insert(
-                    "name".to_string(),
-                    toml::Value::String(lang_name.clone()),
-                );
+                lang_table.insert("name".to_string(), toml::Value::String(lang_name.clone()));
                 let mut servers: Vec<toml::Value> = lang_info
                     .iter()
                     .flat_map(|li| li.default_lsp_servers.iter())
                     .map(|s| toml::Value::String(s.to_string()))
                     .collect();
                 servers.push(toml::Value::String("rvw".to_string()));
-                lang_table.insert(
-                    "language-servers".to_string(),
-                    toml::Value::Array(servers),
-                );
+                lang_table.insert("language-servers".to_string(), toml::Value::Array(servers));
                 lang_arr.push(toml::Value::Table(lang_table));
             }
         }

@@ -12,7 +12,10 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "rvw", about = "Terminal code review tool for agent-produced branches")]
+#[command(
+    name = "rvw",
+    about = "Terminal code review tool for agent-produced branches"
+)]
 struct Cli {
     /// Base branch to diff against (default: auto-detect main/master)
     #[arg(short, long)]

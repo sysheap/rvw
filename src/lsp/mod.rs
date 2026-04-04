@@ -82,8 +82,7 @@ impl LanguageServer for Backend {
             None => return Ok(None),
         };
 
-        let hunks = match git::diff_hunks_for_file(&self.repo_path, &self.base_branch, &file_path)
-        {
+        let hunks = match git::diff_hunks_for_file(&self.repo_path, &self.base_branch, &file_path) {
             Ok(h) => h,
             Err(_) => return Ok(None),
         };
