@@ -308,8 +308,9 @@ fn do_cleanup(info: &CleanupInfo) {
         let _ = std::fs::remove_file(&info.config_path);
         if info.helix_dir.exists()
             && let Ok(mut entries) = std::fs::read_dir(&info.helix_dir)
-                && entries.next().is_none() {
-                    let _ = std::fs::remove_dir(&info.helix_dir);
-                }
+            && entries.next().is_none()
+        {
+            let _ = std::fs::remove_dir(&info.helix_dir);
+        }
     }
 }
