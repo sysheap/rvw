@@ -1,7 +1,8 @@
 use anyhow::Result;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::git::{self, ChangedFile, RepoInfo};
+use crate::git::{self, ChangedFile, DiffHunk, RepoInfo};
 use crate::review::ReviewState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,6 +34,10 @@ pub struct App {
     pub filter: FilterMode,
     pub editor_cmd: String,
     pub should_quit: bool,
+    pub diff_cache: HashMap<String, Vec<DiffHunk>>,
+    pub diff_scroll: u16,
+    pub diff_total_lines: u16,
+    last_diff_file: Option<String>,
 }
 
 impl App {
@@ -44,6 +49,10 @@ impl App {
             filter: FilterMode::All,
             editor_cmd,
             should_quit: false,
+            diff_cache: HashMap::new(),
+            diff_scroll: 0,
+            diff_total_lines: 0,
+            last_diff_file: None,
         }
     }
 
@@ -107,17 +116,54 @@ impl App {
     pub fn total_count(&self) -> usize {
         self.repo_info.files.len()
     }
+
+    pub fn ensure_diff_loaded(&mut self) {
+        let current_path = self.selected_file().map(|f| f.path.clone());
+
+        if current_path != self.last_diff_file {
+            self.diff_scroll = 0;
+            self.last_diff_file = current_path.clone();
+        }
+
+        if let Some(ref path) = current_path
+            && !self.diff_cache.contains_key(path)
+        {
+            let hunks = git::diff_hunks_for_file(
+                &self.repo_info.repo_path,
+                &self.repo_info.base_branch,
+                path,
+            )
+            .unwrap_or_default();
+
+            // +1 per hunk for the header line, +1 between hunks for spacing
+            let total: usize = hunks.iter().map(|h| h.lines.len() + 1).sum::<usize>()
+                + hunks.len().saturating_sub(1);
+            self.diff_total_lines = total as u16;
+
+            self.diff_cache.insert(path.clone(), hunks);
+        }
+    }
+
+    pub fn scroll_diff(&mut self, delta: i16) {
+        if delta > 0 {
+            self.diff_scroll = self
+                .diff_scroll
+                .saturating_add(delta as u16)
+                .min(self.diff_total_lines.saturating_sub(1));
+        } else {
+            self.diff_scroll = self.diff_scroll.saturating_sub((-delta) as u16);
+        }
+    }
 }
 
-pub async fn run(
-    repo_path: PathBuf,
-    base: Option<&str>,
-    editor: Option<&str>,
-) -> Result<()> {
+pub async fn run(repo_path: PathBuf, base: Option<&str>, editor: Option<&str>) -> Result<()> {
     let repo_info = git::analyze_repo(&repo_path, base)?;
 
     if repo_info.files.is_empty() {
-        println!("No changes between '{}' and '{}'.", repo_info.base_branch, repo_info.branch);
+        println!(
+            "No changes between '{}' and '{}'.",
+            repo_info.base_branch, repo_info.branch
+        );
         return Ok(());
     }
 

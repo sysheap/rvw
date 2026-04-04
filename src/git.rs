@@ -35,8 +35,6 @@ impl FileStatus {
 #[derive(Debug, Clone)]
 pub struct Hunk {
     pub new_start: u32,
-    pub new_lines: u32,
-    pub header: String,
 }
 
 #[derive(Debug)]
@@ -49,10 +47,7 @@ pub struct RepoInfo {
 
 pub fn detect_base_branch(repo: &Repository) -> Result<String> {
     for name in &["main", "master"] {
-        if repo
-            .find_branch(name, git2::BranchType::Local)
-            .is_ok()
-        {
+        if repo.find_branch(name, git2::BranchType::Local).is_ok() {
             return Ok(name.to_string());
         }
     }
@@ -96,7 +91,11 @@ pub fn analyze_repo(repo_path: &Path, base_override: Option<&str>) -> Result<Rep
     diff_opts.context_lines(0);
 
     let diff = repo
-        .diff_tree_to_tree(Some(&merge_base_tree), Some(&head_tree), Some(&mut diff_opts))
+        .diff_tree_to_tree(
+            Some(&merge_base_tree),
+            Some(&head_tree),
+            Some(&mut diff_opts),
+        )
         .context("Failed to compute diff")?;
 
     let files = collect_changed_files(&diff)?;
@@ -164,10 +163,7 @@ fn collect_changed_files(diff: &git2::Diff<'_>) -> Result<Vec<ChangedFile>> {
 
         let is_binary = new_file.is_binary() || old_file.is_binary();
 
-        let (additions, deletions) = stats_per_file
-            .get(i)
-            .copied()
-            .unwrap_or((0, 0));
+        let (additions, deletions) = stats_per_file.get(i).copied().unwrap_or((0, 0));
 
         let hunks = collect_hunks_for_file(diff, i)?;
 
@@ -210,10 +206,7 @@ fn collect_stats(diff: &git2::Diff<'_>) -> Result<Vec<(usize, usize)>> {
         Some(&mut |delta, _hunk, line| {
             // Find which delta index this belongs to
             // The callback doesn't directly give us the index, so we match by file path
-            let file_path = delta
-                .new_file()
-                .path()
-                .or_else(|| delta.old_file().path());
+            let file_path = delta.new_file().path().or_else(|| delta.old_file().path());
 
             if let Some(fp) = file_path {
                 for (i, d) in diff.deltas().enumerate() {
@@ -244,11 +237,8 @@ fn collect_hunks_for_file(diff: &git2::Diff<'_>, file_index: usize) -> Result<Ve
         let num_hunks = patch.num_hunks();
         for h in 0..num_hunks {
             let (hunk, _) = patch.hunk(h)?;
-            let header = String::from_utf8_lossy(hunk.header()).trim().to_string();
             hunks.push(Hunk {
                 new_start: hunk.new_start(),
-                new_lines: hunk.new_lines(),
-                header,
             });
         }
     }
@@ -258,7 +248,11 @@ fn collect_hunks_for_file(diff: &git2::Diff<'_>, file_index: usize) -> Result<Ve
 
 /// Get the content of a file at the merge-base commit (used by LSP hover).
 #[allow(dead_code)]
-pub fn get_base_file_content(repo_path: &Path, base_branch: &str, file_path: &str) -> Result<String> {
+pub fn get_base_file_content(
+    repo_path: &Path,
+    base_branch: &str,
+    file_path: &str,
+) -> Result<String> {
     let repo = Repository::discover(repo_path)?;
     let merge_base = find_merge_base(&repo, base_branch)?;
     let tree = merge_base.tree()?;
@@ -286,6 +280,7 @@ pub fn diff_hunks_for_file(
 
     let mut diff_opts = DiffOptions::new();
     diff_opts.patience(true);
+    diff_opts.context_lines(3);
     diff_opts.pathspec(file_path);
 
     let diff = repo.diff_tree_to_tree(
@@ -301,27 +296,46 @@ pub fn diff_hunks_for_file(
         if let Some(patch) = patch {
             for h in 0..patch.num_hunks() {
                 let (hunk_info, num_lines) = patch.hunk(h)?;
+                let header = String::from_utf8_lossy(hunk_info.header())
+                    .trim()
+                    .to_string();
                 let mut old_lines = Vec::new();
                 let mut new_lines = Vec::new();
+                let mut lines = Vec::new();
 
                 for l in 0..num_lines {
                     let line = patch.line_in_hunk(h, l)?;
+                    let content = String::from_utf8_lossy(line.content()).to_string();
                     match line.origin() {
                         '-' => {
                             if let Some(old_lineno) = line.old_lineno() {
-                                old_lines.push((
-                                    old_lineno,
-                                    String::from_utf8_lossy(line.content()).to_string(),
-                                ));
+                                old_lines.push((old_lineno, content.clone()));
                             }
+                            lines.push(DiffLine {
+                                kind: DiffLineKind::Removed,
+                                old_lineno: line.old_lineno(),
+                                new_lineno: line.new_lineno(),
+                                content,
+                            });
                         }
                         '+' => {
                             if let Some(new_lineno) = line.new_lineno() {
-                                new_lines.push((
-                                    new_lineno,
-                                    String::from_utf8_lossy(line.content()).to_string(),
-                                ));
+                                new_lines.push((new_lineno, content.clone()));
                             }
+                            lines.push(DiffLine {
+                                kind: DiffLineKind::Added,
+                                old_lineno: line.old_lineno(),
+                                new_lineno: line.new_lineno(),
+                                content,
+                            });
+                        }
+                        ' ' => {
+                            lines.push(DiffLine {
+                                kind: DiffLineKind::Context,
+                                old_lineno: line.old_lineno(),
+                                new_lineno: line.new_lineno(),
+                                content,
+                            });
                         }
                         _ => {}
                     }
@@ -332,6 +346,8 @@ pub fn diff_hunks_for_file(
                     old_lines: hunk_info.old_lines(),
                     new_start: hunk_info.new_start(),
                     new_lines: hunk_info.new_lines(),
+                    header,
+                    lines,
                     removed_lines: old_lines,
                     added_lines: new_lines,
                 });
@@ -343,12 +359,29 @@ pub fn diff_hunks_for_file(
 }
 
 #[derive(Debug, Clone)]
+pub enum DiffLineKind {
+    Context,
+    Added,
+    Removed,
+}
+
+#[derive(Debug, Clone)]
+pub struct DiffLine {
+    pub kind: DiffLineKind,
+    pub old_lineno: Option<u32>,
+    pub new_lineno: Option<u32>,
+    pub content: String,
+}
+
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct DiffHunk {
     pub old_start: u32,
     pub old_lines: u32,
     pub new_start: u32,
     pub new_lines: u32,
+    pub header: String,
+    pub lines: Vec<DiffLine>,
     pub removed_lines: Vec<(u32, String)>,
     pub added_lines: Vec<(u32, String)>,
 }

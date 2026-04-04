@@ -47,11 +47,7 @@ pub fn handle_key(key: KeyEvent, app: &mut App) -> Action {
                     return Action::None;
                 }
                 let path = file.path.clone();
-                let line = file
-                    .hunks
-                    .first()
-                    .map(|h| h.new_start)
-                    .unwrap_or(1);
+                let line = file.hunks.first().map(|h| h.new_start).unwrap_or(1);
                 Action::OpenEditor { path, line }
             } else {
                 Action::None
@@ -69,6 +65,22 @@ pub fn handle_key(key: KeyEvent, app: &mut App) -> Action {
                     return Action::OpenEditor { path, line };
                 }
             }
+            Action::None
+        }
+        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.scroll_diff(15);
+            Action::None
+        }
+        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.scroll_diff(-15);
+            Action::None
+        }
+        KeyCode::Tab => {
+            app.scroll_diff(1);
+            Action::None
+        }
+        KeyCode::BackTab => {
+            app.scroll_diff(-1);
             Action::None
         }
         _ => Action::None,

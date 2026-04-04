@@ -15,6 +15,7 @@ use ratatui::{
 use std::io;
 
 use crate::app::App;
+use crate::git::DiffLineKind;
 use crate::input;
 
 pub async fn run_tui(app: &mut App) -> Result<()> {
@@ -25,6 +26,7 @@ pub async fn run_tui(app: &mut App) -> Result<()> {
     let mut terminal = ratatui::Terminal::new(backend)?;
 
     loop {
+        app.ensure_diff_loaded();
         terminal.draw(|f| render(f, app))?;
 
         if let Event::Key(key) = event::read()? {
@@ -68,20 +70,27 @@ pub async fn run_tui(app: &mut App) -> Result<()> {
 }
 
 fn render(f: &mut Frame, app: &App) {
-    let chunks = Layout::default()
+    let rows = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),  // header
-            Constraint::Min(5),    // file list
-            Constraint::Length(8), // detail pane
+            Constraint::Length(1), // header
+            Constraint::Min(5),    // main area (file list + diff preview)
             Constraint::Length(2), // help bar
         ])
         .split(f.area());
 
-    render_header(f, app, chunks[0]);
-    render_file_list(f, app, chunks[1]);
-    render_detail(f, app, chunks[2]);
-    render_help(f, chunks[3]);
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(40), // file list
+            Constraint::Min(30),        // diff preview
+        ])
+        .split(rows[1]);
+
+    render_header(f, app, rows[0]);
+    render_file_list(f, app, cols[0]);
+    render_diff_preview(f, app, cols[1]);
+    render_help(f, rows[2]);
 }
 
 fn render_header(f: &mut Frame, app: &App, area: Rect) {
@@ -97,7 +106,12 @@ fn render_header(f: &mut Frame, app: &App, area: Rect) {
         String::new()
     };
     let line = Line::from(vec![
-        Span::styled(header, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            header,
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(filter_label, Style::default().fg(Color::Yellow)),
     ]);
     f.render_widget(Paragraph::new(line), area);
@@ -158,82 +172,103 @@ fn render_file_list(f: &mut Frame, app: &App, area: Rect) {
 
     let list = List::new(items)
         .block(Block::default().borders(Borders::NONE))
-        .highlight_style(Style::default().bg(Color::Indexed(236)).add_modifier(Modifier::BOLD))
+        .highlight_style(
+            Style::default()
+                .bg(Color::Indexed(236))
+                .add_modifier(Modifier::BOLD),
+        )
         .highlight_symbol("▸ ");
 
     f.render_stateful_widget(list, area, &mut state);
 }
 
-fn render_detail(f: &mut Frame, app: &App, area: Rect) {
-    let content = if let Some(file) = app.selected_file() {
-        let mut lines = vec![Line::from(Span::styled(
-            format!(
-                "  {} — {} (+{} -{})",
-                file.path,
-                match file.status {
-                    crate::git::FileStatus::Added => "Added",
-                    crate::git::FileStatus::Modified => "Modified",
-                    crate::git::FileStatus::Deleted => "Deleted",
-                    crate::git::FileStatus::Renamed => "Renamed",
-                },
-                file.additions,
-                file.deletions
-            ),
-            Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
-        ))];
-
-        if file.hunks.is_empty() {
-            lines.push(Line::from("  No hunks (binary or empty diff)"));
-        } else {
-            lines.push(Line::from(Span::styled(
-                "  Changed regions:",
-                Style::default().fg(Color::Gray),
-            )));
-            for (i, hunk) in file.hunks.iter().enumerate() {
-                let end_line = hunk.new_start + hunk.new_lines.saturating_sub(1);
-                let range = if hunk.new_lines <= 1 {
-                    format!("Line {}", hunk.new_start)
-                } else {
-                    format!("Lines {}-{}", hunk.new_start, end_line)
-                };
-
-                // Try to extract function name from hunk header
-                let context = if hunk.header.contains("fn ")
-                    || hunk.header.contains("def ")
-                    || hunk.header.contains("func ")
-                    || hunk.header.contains("function ")
-                    || hunk.header.contains("class ")
-                {
-                    let trimmed = hunk.header.trim_start_matches("@@ ");
-                    if let Some(pos) = trimmed.find("@@") {
-                        let after = trimmed[pos + 2..].trim();
-                        if !after.is_empty() {
-                            format!("  ({})", after)
-                        } else {
-                            String::new()
-                        }
-                    } else {
-                        String::new()
-                    }
-                } else {
-                    String::new()
-                };
-
-                lines.push(Line::from(Span::styled(
-                    format!("    {}. {}{}", i + 1, range, context),
-                    Style::default().fg(Color::Yellow),
-                )));
-            }
+fn render_diff_preview(f: &mut Frame, app: &App, area: Rect) {
+    let file = match app.selected_file() {
+        Some(f) => f,
+        None => {
+            let empty =
+                Paragraph::new("  No file selected").block(Block::default().borders(Borders::LEFT));
+            f.render_widget(empty, area);
+            return;
         }
-
-        lines
-    } else {
-        vec![Line::from("  No file selected")]
     };
 
-    let detail = Paragraph::new(content)
-        .block(Block::default().borders(Borders::TOP));
-    f.render_widget(detail, area);
+    let hunks = match app.diff_cache.get(&file.path) {
+        Some(h) => h,
+        None => {
+            let loading =
+                Paragraph::new("  Loading...").block(Block::default().borders(Borders::LEFT));
+            f.render_widget(loading, area);
+            return;
+        }
+    };
+
+    if hunks.is_empty() {
+        let msg = if file.is_binary {
+            "  Binary file"
+        } else {
+            "  No diff"
+        };
+        let empty = Paragraph::new(msg).block(Block::default().borders(Borders::LEFT));
+        f.render_widget(empty, area);
+        return;
+    }
+
+    let mut lines: Vec<Line> = Vec::new();
+
+    for (i, hunk) in hunks.iter().enumerate() {
+        if i > 0 {
+            lines.push(Line::from(""));
+        }
+
+        lines.push(Line::from(Span::styled(
+            format!(" {}", hunk.header),
+            Style::default().fg(Color::Cyan).add_modifier(Modifier::DIM),
+        )));
+
+        for diff_line in &hunk.lines {
+            let (prefix, style) = match diff_line.kind {
+                DiffLineKind::Context => {
+                    let ln = diff_line.new_lineno.unwrap_or(0);
+                    (
+                        format!(" {:>4}  ", ln),
+                        Style::default().fg(Color::DarkGray),
+                    )
+                }
+                DiffLineKind::Added => {
+                    let ln = diff_line.new_lineno.unwrap_or(0);
+                    (format!(" {:>4} +", ln), Style::default().fg(Color::Green))
+                }
+                DiffLineKind::Removed => {
+                    let ln = diff_line.old_lineno.unwrap_or(0);
+                    (format!(" {:>4} -", ln), Style::default().fg(Color::Red))
+                }
+            };
+
+            let content = diff_line.content.trim_end_matches('\n');
+            lines.push(Line::from(Span::styled(
+                format!("{}{}", prefix, content),
+                style,
+            )));
+        }
+    }
+
+    let title = format!(" {} +{} -{} ", file.path, file.additions, file.deletions,);
+
+    let paragraph = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .borders(Borders::LEFT)
+                .title(title)
+                .title_style(
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+        )
+        .scroll((app.diff_scroll, 0));
+
+    f.render_widget(paragraph, area);
 }
 
 fn render_help(f: &mut Frame, area: Rect) {
@@ -241,15 +276,18 @@ fn render_help(f: &mut Frame, area: Rect) {
         Span::styled("  Enter", Style::default().fg(Color::Green)),
         Span::raw(": open  "),
         Span::styled("1-9", Style::default().fg(Color::Green)),
-        Span::raw(": open at hunk  "),
+        Span::raw(": hunk  "),
         Span::styled("r", Style::default().fg(Color::Green)),
-        Span::raw(": toggle reviewed  "),
+        Span::raw(": reviewed  "),
         Span::styled("f", Style::default().fg(Color::Green)),
         Span::raw(": filter  "),
+        Span::styled("Tab/S-Tab", Style::default().fg(Color::Green)),
+        Span::raw(": scroll  "),
+        Span::styled("^d/^u", Style::default().fg(Color::Green)),
+        Span::raw(": page  "),
         Span::styled("q", Style::default().fg(Color::Green)),
         Span::raw(": quit"),
     ]);
-    let widget = Paragraph::new(help)
-        .block(Block::default().borders(Borders::TOP));
+    let widget = Paragraph::new(help).block(Block::default().borders(Borders::TOP));
     f.render_widget(widget, area);
 }
