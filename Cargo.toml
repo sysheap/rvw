@@ -2,8 +2,15 @@
 name = "rvw"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 license = "MIT"
 description = "Terminal code review tool for agent-produced branches"
+repository = "https://github.com/sysheap/rvw"
+homepage = "https://github.com/sysheap/rvw"
+readme = "README.md"
+keywords = ["code-review", "tui", "git", "lsp", "helix"]
+categories = ["command-line-utilities", "development-tools"]
+exclude = [".indxr-cache/", "CLAUDE.md", "INDEX.md", ".github/", ".claude/", ".mcp.json"]
 
 [dependencies]
 ratatui = "0.30"
