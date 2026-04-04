@@ -2,6 +2,8 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::app::App;
 
+const DIFF_PAGE_LINES: i16 = 15;
+
 pub enum Action {
     None,
     Quit,
@@ -68,11 +70,11 @@ pub fn handle_key(key: KeyEvent, app: &mut App) -> Action {
             Action::None
         }
         KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            app.scroll_diff(15);
+            app.scroll_diff(DIFF_PAGE_LINES);
             Action::None
         }
         KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            app.scroll_diff(-15);
+            app.scroll_diff(-DIFF_PAGE_LINES);
             Action::None
         }
         KeyCode::Tab => {

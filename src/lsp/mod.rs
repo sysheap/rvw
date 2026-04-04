@@ -94,14 +94,12 @@ impl LanguageServer for Backend {
             let hunk_end = hunk.new_start + hunk.new_lines;
             if line >= hunk.new_start && line < hunk_end {
                 // This line is in a changed hunk - show old code
-                let old_code = if hunk.removed_lines.is_empty() {
+                let removed: Vec<(u32, &str)> = hunk.removed_lines().collect();
+                let old_code = if removed.is_empty() {
                     "*(new code — not present on base branch)*".to_string()
                 } else {
-                    let old_lines: Vec<&str> = hunk
-                        .removed_lines
-                        .iter()
-                        .map(|(_, content)| content.as_str())
-                        .collect();
+                    let old_lines: Vec<&str> =
+                        removed.iter().map(|(_, content)| *content).collect();
 
                     // Detect language for syntax highlighting
                     let lang = std::path::Path::new(&file_path)

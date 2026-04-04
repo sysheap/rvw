@@ -193,7 +193,7 @@ fn render_diff_preview(f: &mut Frame, app: &App, area: Rect) {
         }
     };
 
-    let hunks = match app.diff_cache.get(&file.path) {
+    let hunks = match app.current_diff_hunks() {
         Some(h) => h,
         None => {
             let loading =

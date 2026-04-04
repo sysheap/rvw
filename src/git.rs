@@ -299,46 +299,22 @@ pub fn diff_hunks_for_file(
                 let header = String::from_utf8_lossy(hunk_info.header())
                     .trim()
                     .to_string();
-                let mut old_lines = Vec::new();
-                let mut new_lines = Vec::new();
                 let mut lines = Vec::new();
 
                 for l in 0..num_lines {
                     let line = patch.line_in_hunk(h, l)?;
-                    let content = String::from_utf8_lossy(line.content()).to_string();
-                    match line.origin() {
-                        '-' => {
-                            if let Some(old_lineno) = line.old_lineno() {
-                                old_lines.push((old_lineno, content.clone()));
-                            }
-                            lines.push(DiffLine {
-                                kind: DiffLineKind::Removed,
-                                old_lineno: line.old_lineno(),
-                                new_lineno: line.new_lineno(),
-                                content,
-                            });
-                        }
-                        '+' => {
-                            if let Some(new_lineno) = line.new_lineno() {
-                                new_lines.push((new_lineno, content.clone()));
-                            }
-                            lines.push(DiffLine {
-                                kind: DiffLineKind::Added,
-                                old_lineno: line.old_lineno(),
-                                new_lineno: line.new_lineno(),
-                                content,
-                            });
-                        }
-                        ' ' => {
-                            lines.push(DiffLine {
-                                kind: DiffLineKind::Context,
-                                old_lineno: line.old_lineno(),
-                                new_lineno: line.new_lineno(),
-                                content,
-                            });
-                        }
-                        _ => {}
-                    }
+                    let kind = match line.origin() {
+                        '-' => DiffLineKind::Removed,
+                        '+' => DiffLineKind::Added,
+                        ' ' => DiffLineKind::Context,
+                        _ => continue,
+                    };
+                    lines.push(DiffLine {
+                        kind,
+                        old_lineno: line.old_lineno(),
+                        new_lineno: line.new_lineno(),
+                        content: String::from_utf8_lossy(line.content()).into_owned(),
+                    });
                 }
 
                 hunks.push(DiffHunk {
@@ -348,8 +324,6 @@ pub fn diff_hunks_for_file(
                     new_lines: hunk_info.new_lines(),
                     header,
                     lines,
-                    removed_lines: old_lines,
-                    added_lines: new_lines,
                 });
             }
         }
@@ -358,7 +332,7 @@ pub fn diff_hunks_for_file(
     Ok(hunks)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DiffLineKind {
     Context,
     Added,
@@ -374,7 +348,6 @@ pub struct DiffLine {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct DiffHunk {
     pub old_start: u32,
     pub old_lines: u32,
@@ -382,6 +355,20 @@ pub struct DiffHunk {
     pub new_lines: u32,
     pub header: String,
     pub lines: Vec<DiffLine>,
-    pub removed_lines: Vec<(u32, String)>,
-    pub added_lines: Vec<(u32, String)>,
+}
+
+impl DiffHunk {
+    pub fn removed_lines(&self) -> impl Iterator<Item = (u32, &str)> {
+        self.lines
+            .iter()
+            .filter(|l| l.kind == DiffLineKind::Removed)
+            .filter_map(|l| l.old_lineno.map(|n| (n, l.content.as_str())))
+    }
+
+    pub fn added_lines(&self) -> impl Iterator<Item = (u32, &str)> {
+        self.lines
+            .iter()
+            .filter(|l| l.kind == DiffLineKind::Added)
+            .filter_map(|l| l.new_lineno.map(|n| (n, l.content.as_str())))
+    }
 }

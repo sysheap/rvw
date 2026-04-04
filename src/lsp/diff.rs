@@ -9,8 +9,8 @@ pub fn hunks_to_diagnostics(hunks: &[DiffHunk]) -> Vec<Diagnostic> {
             let start_line = hunk.new_start.saturating_sub(1); // LSP is 0-based
             let end_line = start_line + hunk.new_lines.saturating_sub(1);
 
-            let added = hunk.added_lines.len();
-            let removed = hunk.removed_lines.len();
+            let added = hunk.added_lines().count();
+            let removed = hunk.removed_lines().count();
 
             let message = if removed == 0 {
                 format!("New code (+{} lines)", added)

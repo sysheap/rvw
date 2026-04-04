@@ -34,9 +34,8 @@ pub struct App {
     pub filter: FilterMode,
     pub editor_cmd: String,
     pub should_quit: bool,
-    pub diff_cache: HashMap<String, Vec<DiffHunk>>,
+    diff_cache: HashMap<String, Vec<DiffHunk>>,
     pub diff_scroll: u16,
-    pub diff_total_lines: u16,
     last_diff_file: Option<String>,
 }
 
@@ -51,7 +50,6 @@ impl App {
             should_quit: false,
             diff_cache: HashMap::new(),
             diff_scroll: 0,
-            diff_total_lines: 0,
             last_diff_file: None,
         }
     }
@@ -135,21 +133,33 @@ impl App {
             )
             .unwrap_or_default();
 
-            // +1 per hunk for the header line, +1 between hunks for spacing
-            let total: usize = hunks.iter().map(|h| h.lines.len() + 1).sum::<usize>()
-                + hunks.len().saturating_sub(1);
-            self.diff_total_lines = total as u16;
-
             self.diff_cache.insert(path.clone(), hunks);
         }
     }
 
+    pub fn current_diff_hunks(&self) -> Option<&[DiffHunk]> {
+        let path = &self.selected_file()?.path;
+        self.diff_cache.get(path).map(|v| v.as_slice())
+    }
+
+    fn diff_display_lines(&self) -> u16 {
+        match self.current_diff_hunks() {
+            Some(hunks) => {
+                let total: usize = hunks.iter().map(|h| h.lines.len() + 1).sum::<usize>()
+                    + hunks.len().saturating_sub(1);
+                total as u16
+            }
+            None => 0,
+        }
+    }
+
     pub fn scroll_diff(&mut self, delta: i16) {
+        let total = self.diff_display_lines();
         if delta > 0 {
             self.diff_scroll = self
                 .diff_scroll
                 .saturating_add(delta as u16)
-                .min(self.diff_total_lines.saturating_sub(1));
+                .min(total.saturating_sub(1));
         } else {
             self.diff_scroll = self.diff_scroll.saturating_sub((-delta) as u16);
         }
