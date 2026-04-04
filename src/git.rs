@@ -265,7 +265,6 @@ pub fn get_base_file_content(
 }
 
 /// Compute diff hunks for a specific file between merge-base and HEAD.
-/// Returns (old_lines, new_lines) per hunk, where each entry is the line ranges.
 pub fn diff_hunks_for_file(
     repo_path: &Path,
     base_branch: &str,
@@ -318,8 +317,6 @@ pub fn diff_hunks_for_file(
                 }
 
                 hunks.push(DiffHunk {
-                    old_start: hunk_info.old_start(),
-                    old_lines: hunk_info.old_lines(),
                     new_start: hunk_info.new_start(),
                     new_lines: hunk_info.new_lines(),
                     header,
@@ -349,8 +346,6 @@ pub struct DiffLine {
 
 #[derive(Debug, Clone)]
 pub struct DiffHunk {
-    pub old_start: u32,
-    pub old_lines: u32,
     pub new_start: u32,
     pub new_lines: u32,
     pub header: String,
