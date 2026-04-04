@@ -18,6 +18,17 @@ use crate::app::App;
 use crate::git::DiffLineKind;
 use crate::input;
 
+// Color palette — uses ANSI colors (remapped by terminal themes) and Reset
+// (terminal default foreground) so the TUI works across light and dark backgrounds.
+const COLOR_HEADER: Color = Color::Cyan;
+const COLOR_FILTER: Color = Color::Yellow;
+const COLOR_HUNK_HEADER: Color = Color::Cyan;
+const COLOR_CONTEXT: Color = Color::Reset;
+const COLOR_ADDED: Color = Color::Green;
+const COLOR_REMOVED: Color = Color::Red;
+const COLOR_DIFF_TITLE: Color = Color::Reset;
+const COLOR_HELP_KEY: Color = Color::Green;
+
 pub async fn run_tui(app: &mut App) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -109,10 +120,10 @@ fn render_header(f: &mut Frame, app: &App, area: Rect) {
         Span::styled(
             header,
             Style::default()
-                .fg(Color::Cyan)
+                .fg(COLOR_HEADER)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled(filter_label, Style::default().fg(Color::Yellow)),
+        Span::styled(filter_label, Style::default().fg(COLOR_FILTER)),
     ]);
     f.render_widget(Paragraph::new(line), area);
 }
@@ -174,8 +185,8 @@ fn render_file_list(f: &mut Frame, app: &App, area: Rect) {
         .block(Block::default().borders(Borders::NONE))
         .highlight_style(
             Style::default()
-                .bg(Color::Indexed(236))
-                .add_modifier(Modifier::BOLD),
+                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::REVERSED),
         )
         .highlight_symbol("▸ ");
 
@@ -223,7 +234,9 @@ fn render_diff_preview(f: &mut Frame, app: &App, area: Rect) {
 
         lines.push(Line::from(Span::styled(
             format!(" {}", hunk.header),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::DIM),
+            Style::default()
+                .fg(COLOR_HUNK_HEADER)
+                .add_modifier(Modifier::DIM),
         )));
 
         for diff_line in &hunk.lines {
@@ -232,16 +245,18 @@ fn render_diff_preview(f: &mut Frame, app: &App, area: Rect) {
                     let ln = diff_line.new_lineno.unwrap_or(0);
                     (
                         format!(" {:>4}  ", ln),
-                        Style::default().fg(Color::DarkGray),
+                        Style::default()
+                            .fg(COLOR_CONTEXT)
+                            .add_modifier(Modifier::DIM),
                     )
                 }
                 DiffLineKind::Added => {
                     let ln = diff_line.new_lineno.unwrap_or(0);
-                    (format!(" {:>4} +", ln), Style::default().fg(Color::Green))
+                    (format!(" {:>4} +", ln), Style::default().fg(COLOR_ADDED))
                 }
                 DiffLineKind::Removed => {
                     let ln = diff_line.old_lineno.unwrap_or(0);
-                    (format!(" {:>4} -", ln), Style::default().fg(Color::Red))
+                    (format!(" {:>4} -", ln), Style::default().fg(COLOR_REMOVED))
                 }
             };
 
@@ -262,7 +277,7 @@ fn render_diff_preview(f: &mut Frame, app: &App, area: Rect) {
                 .title(title)
                 .title_style(
                     Style::default()
-                        .fg(Color::White)
+                        .fg(COLOR_DIFF_TITLE)
                         .add_modifier(Modifier::BOLD),
                 ),
         )
@@ -273,19 +288,19 @@ fn render_diff_preview(f: &mut Frame, app: &App, area: Rect) {
 
 fn render_help(f: &mut Frame, area: Rect) {
     let help = Line::from(vec![
-        Span::styled("  Enter", Style::default().fg(Color::Green)),
+        Span::styled("  Enter", Style::default().fg(COLOR_HELP_KEY)),
         Span::raw(": open  "),
-        Span::styled("1-9", Style::default().fg(Color::Green)),
+        Span::styled("1-9", Style::default().fg(COLOR_HELP_KEY)),
         Span::raw(": hunk  "),
-        Span::styled("r", Style::default().fg(Color::Green)),
+        Span::styled("r", Style::default().fg(COLOR_HELP_KEY)),
         Span::raw(": reviewed  "),
-        Span::styled("f", Style::default().fg(Color::Green)),
+        Span::styled("f", Style::default().fg(COLOR_HELP_KEY)),
         Span::raw(": filter  "),
-        Span::styled("Tab/S-Tab", Style::default().fg(Color::Green)),
+        Span::styled("Tab/S-Tab", Style::default().fg(COLOR_HELP_KEY)),
         Span::raw(": scroll  "),
-        Span::styled("^d/^u", Style::default().fg(Color::Green)),
+        Span::styled("^d/^u", Style::default().fg(COLOR_HELP_KEY)),
         Span::raw(": page  "),
-        Span::styled("q", Style::default().fg(Color::Green)),
+        Span::styled("q", Style::default().fg(COLOR_HELP_KEY)),
         Span::raw(": quit"),
     ]);
     let widget = Paragraph::new(help).block(Block::default().borders(Borders::TOP));
