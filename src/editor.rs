@@ -306,12 +306,10 @@ fn do_cleanup(info: &CleanupInfo) {
         let _ = std::fs::rename(&info.backup_path, &info.config_path);
     } else if info.config_path.exists() && !info.had_existing {
         let _ = std::fs::remove_file(&info.config_path);
-        if info.helix_dir.exists() {
-            if let Ok(mut entries) = std::fs::read_dir(&info.helix_dir) {
-                if entries.next().is_none() {
+        if info.helix_dir.exists()
+            && let Ok(mut entries) = std::fs::read_dir(&info.helix_dir)
+                && entries.next().is_none() {
                     let _ = std::fs::remove_dir(&info.helix_dir);
                 }
-            }
-        }
     }
 }
