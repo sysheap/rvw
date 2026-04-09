@@ -1,7 +1,7 @@
 # Codebase Index: rvw
 
-> Generated: 2026-04-04 17:04:25 UTC | Files: 13 | Lines: 1812
-> Languages: Markdown (2), Rust (10), TOML (1)
+> Generated: 2026-04-09 18:11:26 UTC | Files: 14 | Lines: 2455
+> Languages: Markdown (3), Rust (10), TOML (1)
 
 ## Directory Structure
 
@@ -9,6 +9,7 @@
 rvw/
   CLAUDE.md
   Cargo.toml
+  INDEX.md
   README.md
   src/
     app.rs
@@ -35,6 +36,9 @@ rvw/
 - `[package]`
 - `[dependencies]`
 
+**INDEX.md**
+- `# Codebase Index: rvw`
+
 **README.md**
 - `# rvw`
 - `# Review current branch against main (auto-detected)`
@@ -44,7 +48,7 @@ rvw/
 **src/app.rs**
 - `pub enum FilterMode`
 - `pub struct App`
-- `pub async fn run( repo_path: PathBuf, base: Option<&str>, editor: Option<&str>, ) -> Result<()>`
+- `pub async fn run(repo_path: PathBuf, base: Option<&str>, editor: Option<&str>) -> Result<()>`
 
 **src/editor.rs**
 - `pub fn open_editor(editor_cmd: &str, repo_path: &Path, file_path: &str, line: u32) -> Result<()>`
@@ -58,8 +62,10 @@ rvw/
 - `pub fn detect_base_branch(repo: &Repository) -> Result<String>`
 - `pub fn current_branch(repo: &Repository) -> Result<String>`
 - `pub fn analyze_repo(repo_path: &Path, base_override: Option<&str>) -> Result<RepoInfo>`
-- `pub fn get_base_file_content(repo_path: &Path, base_branch: &str, file_path: &str) -> Result<String>`
+- `pub fn get_base_file_content( repo_path: &Path, base_branch: &str, file_path: &str, ) -> Result<String>`
 - `pub fn diff_hunks_for_file( repo_path: &Path, base_branch: &str, file_path: &str, ) -> Result<Vec<DiffHunk>>`
+- `pub enum DiffLineKind`
+- `pub struct DiffLine`
 - `pub struct DiffHunk`
 
 **src/input.rs**
@@ -90,7 +96,7 @@ rvw/
 
 ## CLAUDE.md
 
-**Language:** Markdown | **Size:** 2.6 KB | **Lines:** 41
+**Language:** Markdown | **Size:** 7.0 KB | **Lines:** 106
 
 **Declarations:**
 
@@ -98,7 +104,7 @@ rvw/
 
 ## Cargo.toml
 
-**Language:** TOML | **Size:** 502 B | **Lines:** 22
+**Language:** TOML | **Size:** 854 B | **Lines:** 29
 
 **Imports:**
 - `ratatui`
@@ -117,9 +123,17 @@ rvw/
 
 ---
 
+## INDEX.md
+
+**Language:** Markdown | **Size:** 8.1 KB | **Lines:** 405
+
+**Declarations:**
+
+---
+
 ## README.md
 
-**Language:** Markdown | **Size:** 3.2 KB | **Lines:** 87
+**Language:** Markdown | **Size:** 2.3 KB | **Lines:** 69
 
 **Declarations:**
 
@@ -127,12 +141,13 @@ rvw/
 
 ## src/app.rs
 
-**Language:** Rust | **Size:** 3.6 KB | **Lines:** 146
+**Language:** Rust | **Size:** 7.0 KB | **Lines:** 242
 
 **Imports:**
 - `anyhow::Result`
+- `std::collections::HashMap`
 - `std::path::PathBuf`
-- `crate::git::{self, ChangedFile, RepoInfo}`
+- `crate::git::{self, ChangedFile, DiffHunk, RepoInfo}`
 - `crate::review::ReviewState`
 
 **Declarations:**
@@ -152,9 +167,11 @@ rvw/
 
   `pub fn move_selection(&mut self, delta: i32)`
 
+  `pub fn advance_after_review(&mut self)`
+
   `pub fn toggle_filter(&mut self)`
 
-  `pub fn toggle_reviewed(&mut self)`
+  `pub fn toggle_reviewed(&mut self) -> bool`
 
   `pub fn mark_reviewed(&mut self, path: &str)`
 
@@ -162,12 +179,20 @@ rvw/
 
   `pub fn total_count(&self) -> usize`
 
+  `pub fn ensure_diff_loaded(&mut self)`
+
+  `pub fn current_diff_hunks(&self) -> Option<&[DiffHunk]>`
+
+  `fn diff_display_lines(&self) -> u16`
+
+  `pub fn scroll_diff(&mut self, delta: i16)`
+
 
 ---
 
 ## src/editor.rs
 
-**Language:** Rust | **Size:** 11.4 KB | **Lines:** 328
+**Language:** Rust | **Size:** 11.1 KB | **Lines:** 316
 
 **Imports:**
 - `anyhow::{Context, Result}`
@@ -202,7 +227,7 @@ rvw/
 
 ## src/git.rs
 
-**Language:** Rust | **Size:** 10.5 KB | **Lines:** 354
+**Language:** Rust | **Size:** 10.5 KB | **Lines:** 369
 
 **Imports:**
 - `anyhow::{Context, Result, bail}`
@@ -223,17 +248,25 @@ rvw/
 
 `fn collect_hunks_for_file(diff: &git2::Diff<'_>, file_index: usize) -> Result<Vec<Hunk>>`
 
+**`impl DiffHunk`**
+  `pub fn removed_lines(&self) -> impl Iterator<Item = (u32, &str)>`
+
+  `pub fn added_lines(&self) -> impl Iterator<Item = (u32, &str)>`
+
+
 ---
 
 ## src/input.rs
 
-**Language:** Rust | **Size:** 2.3 KB | **Lines:** 76
+**Language:** Rust | **Size:** 3.0 KB | **Lines:** 94
 
 **Imports:**
 - `crossterm::event::{KeyCode, KeyEvent, KeyModifiers}`
 - `crate::app::App`
 
 **Declarations:**
+
+`const DIFF_PAGE_LINES: i16 = 15`
 
 ---
 
@@ -250,7 +283,7 @@ rvw/
 
 ## src/lsp/diff.rs
 
-**Language:** Rust | **Size:** 1.3 KB | **Lines:** 41
+**Language:** Rust | **Size:** 1.4 KB | **Lines:** 43
 
 **Imports:**
 - `tower_lsp::lsp_types::*`
@@ -262,7 +295,7 @@ rvw/
 
 ## src/lsp/mod.rs
 
-**Language:** Rust | **Size:** 4.8 KB | **Lines:** 150
+**Language:** Rust | **Size:** 4.8 KB | **Lines:** 147
 
 **Imports:**
 - `anyhow::Result`
@@ -301,7 +334,7 @@ rvw/
 
 ## src/main.rs
 
-**Language:** Rust | **Size:** 1.4 KB | **Lines:** 63
+**Language:** Rust | **Size:** 1.4 KB | **Lines:** 66
 
 **Imports:**
 - `anyhow::Result`
@@ -338,7 +371,7 @@ rvw/
 
 ## src/review.rs
 
-**Language:** Rust | **Size:** 3.3 KB | **Lines:** 115
+**Language:** Rust | **Size:** 3.4 KB | **Lines:** 125
 
 **Imports:**
 - `anyhow::{Context, Result}`
@@ -370,7 +403,7 @@ rvw/
 
 ## src/ui.rs
 
-**Language:** Rust | **Size:** 8.4 KB | **Lines:** 255
+**Language:** Rust | **Size:** 9.8 KB | **Lines:** 310
 
 **Imports:**
 - `anyhow::Result`
@@ -389,9 +422,26 @@ rvw/
 }`
 - `std::io`
 - `crate::app::App`
+- `crate::git::DiffLineKind`
 - `crate::input`
 
 **Declarations:**
+
+`const COLOR_HEADER: Color = Color::Cyan`
+
+`const COLOR_FILTER: Color = Color::Yellow`
+
+`const COLOR_HUNK_HEADER: Color = Color::Cyan`
+
+`const COLOR_CONTEXT: Color = Color::Reset`
+
+`const COLOR_ADDED: Color = Color::Green`
+
+`const COLOR_REMOVED: Color = Color::Red`
+
+`const COLOR_DIFF_TITLE: Color = Color::Reset`
+
+`const COLOR_HELP_KEY: Color = Color::Green`
 
 `fn render(f: &mut Frame, app: &App)`
 
@@ -399,7 +449,7 @@ rvw/
 
 `fn render_file_list(f: &mut Frame, app: &App, area: Rect)`
 
-`fn render_detail(f: &mut Frame, app: &App, area: Rect)`
+`fn render_diff_preview(f: &mut Frame, app: &App, area: Rect)`
 
 `fn render_help(f: &mut Frame, area: Rect)`
 

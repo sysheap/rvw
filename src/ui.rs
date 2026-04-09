@@ -184,6 +184,7 @@ fn render_file_list(f: &mut Frame, app: &App, area: Rect) {
 
     let list = List::new(items)
         .block(Block::default().borders(Borders::NONE))
+        .scroll_padding((area.height as usize) / 4)
         .highlight_style(
             Style::default()
                 .add_modifier(Modifier::BOLD)
