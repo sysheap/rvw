@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-09
+
+### Added
+- Auto-demote previously reviewed files back to Pending when their diff has changed since you last reviewed them, so iterative agent edits can't slip past unnoticed (d5708b9)
+
 ## [0.2.0] - 2026-04-09
 
 ### Changed
@@ -20,5 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `rust-toolchain.toml` for reproducible builds (ff40dbe)
 
-[Unreleased]: https://github.com/sysheap/rvw/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/sysheap/rvw/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/sysheap/rvw/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sysheap/rvw/compare/v0.1.0...v0.2.0
