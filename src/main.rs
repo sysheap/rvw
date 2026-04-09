@@ -14,7 +14,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(
     name = "rvw",
-    about = "Terminal code review tool for agent-produced branches"
+    about = "Terminal code review tool — review git branches in your editor with full LSP support"
 )]
 struct Cli {
     /// Base branch to diff against (default: auto-detect main/master)
