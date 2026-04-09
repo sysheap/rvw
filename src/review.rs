@@ -19,6 +19,11 @@ pub struct ReviewState {
 pub struct FileReviewState {
     pub status: ReviewStatus,
     pub reviewed_at: Option<DateTime<Utc>>,
+    /// Snapshot of the file's diff signature at the moment it was marked
+    /// reviewed. `None` for legacy state files written before this field
+    /// existed; such entries are left untouched by `invalidate_stale`.
+    #[serde(default)]
+    pub reviewed_signature: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -65,12 +70,13 @@ impl ReviewState {
             .is_some_and(|f| f.status == ReviewStatus::Reviewed)
     }
 
-    pub fn mark_reviewed(&mut self, path: &str) {
+    pub fn mark_reviewed(&mut self, path: &str, signature: String) {
         self.files.insert(
             path.to_string(),
             FileReviewState {
                 status: ReviewStatus::Reviewed,
                 reviewed_at: Some(Utc::now()),
+                reviewed_signature: Some(signature),
             },
         );
     }
@@ -81,15 +87,43 @@ impl ReviewState {
             FileReviewState {
                 status: ReviewStatus::Pending,
                 reviewed_at: None,
+                reviewed_signature: None,
             },
         );
     }
 
-    pub fn toggle_reviewed(&mut self, path: &str) {
+    pub fn toggle_reviewed(&mut self, path: &str, signature: String) {
         if self.is_reviewed(path) {
             self.mark_pending(path);
         } else {
-            self.mark_reviewed(path);
+            self.mark_reviewed(path, signature);
+        }
+    }
+
+    /// Demote any "Reviewed" entries whose stored diff signature no longer
+    /// matches the current signature for that path.
+    ///
+    /// Note: this intentionally fires when a merge-base shift changes the
+    /// base-side blob OID, even if the file in HEAD is untouched. The diff
+    /// the reviewer saw is no longer what's currently displayed, so a fresh
+    /// review is warranted. Don't "fix" this.
+    ///
+    /// Legacy entries with `reviewed_signature == None` are left alone — we
+    /// have no baseline to compare against, so we trust them. The next
+    /// `mark_reviewed` will populate the field.
+    pub fn invalidate_stale(&mut self, current_signatures: &HashMap<String, String>) {
+        for (path, file_state) in self.files.iter_mut() {
+            if file_state.status != ReviewStatus::Reviewed {
+                continue;
+            }
+            let Some(stored) = file_state.reviewed_signature.as_ref() else {
+                continue;
+            };
+            if current_signatures.get(path) != Some(stored) {
+                file_state.status = ReviewStatus::Pending;
+                file_state.reviewed_at = None;
+                file_state.reviewed_signature = None;
+            }
         }
     }
 }
