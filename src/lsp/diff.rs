@@ -7,7 +7,6 @@ pub fn hunks_to_diagnostics(hunks: &[DiffHunk]) -> Vec<Diagnostic> {
         .iter()
         .map(|hunk| {
             let start_line = hunk.new_start.saturating_sub(1); // LSP is 0-based
-            let end_line = start_line + hunk.new_lines.saturating_sub(1);
 
             let added = hunk.added_lines().count();
             let removed = hunk.removed_lines().count();
@@ -20,6 +19,9 @@ pub fn hunks_to_diagnostics(hunks: &[DiffHunk]) -> Vec<Diagnostic> {
                 format!("Changed: +{} -{} lines", added, removed)
             };
 
+            // Emit a zero-width HINT marker at the first line of the hunk
+            // instead of spanning every added line. This keeps `]d`/`[d` and
+            // hover working but avoids carpeting the buffer with squiggles.
             Diagnostic {
                 range: Range {
                     start: Position {
@@ -27,11 +29,11 @@ pub fn hunks_to_diagnostics(hunks: &[DiffHunk]) -> Vec<Diagnostic> {
                         character: 0,
                     },
                     end: Position {
-                        line: end_line,
-                        character: u32::MAX,
+                        line: start_line,
+                        character: 0,
                     },
                 },
-                severity: Some(DiagnosticSeverity::INFORMATION),
+                severity: Some(DiagnosticSeverity::HINT),
                 source: Some("rvw".to_string()),
                 message,
                 ..Default::default()

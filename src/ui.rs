@@ -59,8 +59,9 @@ pub async fn run_tui(app: &mut App) -> Result<()> {
                         line,
                     )?;
 
-                    // Mark as reviewed
+                    // Mark as reviewed and advance to the next file
                     app.mark_reviewed(&opened_path);
+                    app.advance_after_review();
 
                     // Resume TUI
                     enable_raw_mode()?;

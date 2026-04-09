@@ -40,7 +40,11 @@ pub fn handle_key(key: KeyEvent, app: &mut App) -> Action {
             Action::None
         }
         KeyCode::Char('r') => {
-            app.toggle_reviewed();
+            // Advance only when the toggle *marks* the file reviewed;
+            // un-reviewing stays put so the user can correct the same row.
+            if app.toggle_reviewed() {
+                app.advance_after_review();
+            }
             Action::None
         }
         KeyCode::Enter => {

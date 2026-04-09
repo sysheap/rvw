@@ -84,6 +84,37 @@ impl App {
         }
     }
 
+    /// Advance the selection after the current file has been marked reviewed.
+    ///
+    /// In `FilterMode::All`, step forward by one (bounded to the last file) —
+    /// the filtered list didn't shrink, so we need to actively move.
+    ///
+    /// In `FilterMode::Pending`, the just-reviewed file has already dropped
+    /// out of the filtered list, so the selection index naturally points at
+    /// what was the next pending file. We only need to clamp back into range
+    /// if we were on the last entry.
+    ///
+    /// Must also handle the empty-list case (e.g., Pending mode after the
+    /// final file was reviewed) — mirror `move_selection`'s behavior of
+    /// resetting `selected` to `0`.
+    pub fn advance_after_review(&mut self) {
+        let len = self.filtered_files().len();
+        if len == 0 {
+            self.selected = 0;
+            return;
+        }
+        match self.filter {
+            FilterMode::All => {
+                self.selected = (self.selected + 1).min(len - 1);
+            }
+            FilterMode::Pending => {
+                if self.selected >= len {
+                    self.selected = len - 1;
+                }
+            }
+        }
+    }
+
     pub fn toggle_filter(&mut self) {
         self.filter = self.filter.cycle();
         let len = self.filtered_files().len();
@@ -92,10 +123,19 @@ impl App {
         }
     }
 
-    pub fn toggle_reviewed(&mut self) {
+    /// Toggle the reviewed state of the currently-selected file.
+    ///
+    /// Returns `true` if the file is now marked reviewed, `false` otherwise
+    /// (including when no file is selected). Call sites use this to decide
+    /// whether to auto-advance the selection — un-reviewing should stay put,
+    /// marking-as-reviewed should advance.
+    pub fn toggle_reviewed(&mut self) -> bool {
         if let Some(file) = self.selected_file() {
             let path = file.path.clone();
             self.review_state.toggle_reviewed(&path);
+            self.review_state.is_reviewed(&path)
+        } else {
+            false
         }
     }
 
