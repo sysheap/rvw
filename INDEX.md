@@ -1,16 +1,18 @@
 # Codebase Index: rvw
 
-> Generated: 2026-04-09 18:11:26 UTC | Files: 14 | Lines: 2455
-> Languages: Markdown (3), Rust (10), TOML (1)
+> Generated: 2026-04-09 19:27:53 UTC | Files: 16 | Lines: 2598
+> Languages: Markdown (4), Rust (10), TOML (2)
 
 ## Directory Structure
 
 ```
 rvw/
+  CHANGELOG.md
   CLAUDE.md
   Cargo.toml
   INDEX.md
   README.md
+  rust-toolchain.toml
   src/
     app.rs
     editor.rs
@@ -29,6 +31,9 @@ rvw/
 
 ## Public API Surface
 
+**CHANGELOG.md**
+- `# Changelog`
+
 **CLAUDE.md**
 - `# CLAUDE.md`
 
@@ -44,6 +49,9 @@ rvw/
 - `# Review current branch against main (auto-detected)`
 - `# Review against a specific base branch`
 - `# Use a different repository path`
+
+**rust-toolchain.toml**
+- `[toolchain]`
 
 **src/app.rs**
 - `pub enum FilterMode`
@@ -94,6 +102,14 @@ rvw/
 
 ---
 
+## CHANGELOG.md
+
+**Language:** Markdown | **Size:** 789 B | **Lines:** 24
+
+**Declarations:**
+
+---
+
 ## CLAUDE.md
 
 **Language:** Markdown | **Size:** 7.0 KB | **Lines:** 106
@@ -104,7 +120,7 @@ rvw/
 
 ## Cargo.toml
 
-**Language:** TOML | **Size:** 854 B | **Lines:** 29
+**Language:** TOML | **Size:** 887 B | **Lines:** 29
 
 **Imports:**
 - `ratatui`
@@ -125,7 +141,7 @@ rvw/
 
 ## INDEX.md
 
-**Language:** Markdown | **Size:** 8.1 KB | **Lines:** 405
+**Language:** Markdown | **Size:** 9.2 KB | **Lines:** 455
 
 **Declarations:**
 
@@ -133,7 +149,15 @@ rvw/
 
 ## README.md
 
-**Language:** Markdown | **Size:** 2.3 KB | **Lines:** 69
+**Language:** Markdown | **Size:** 3.1 KB | **Lines:** 77
+
+**Declarations:**
+
+---
+
+## rust-toolchain.toml
+
+**Language:** TOML | **Size:** 66 B | **Lines:** 3
 
 **Declarations:**
 
@@ -141,7 +165,7 @@ rvw/
 
 ## src/app.rs
 
-**Language:** Rust | **Size:** 7.0 KB | **Lines:** 242
+**Language:** Rust | **Size:** 7.5 KB | **Lines:** 259
 
 **Imports:**
 - `anyhow::Result`
@@ -227,7 +251,7 @@ rvw/
 
 ## src/git.rs
 
-**Language:** Rust | **Size:** 10.5 KB | **Lines:** 369
+**Language:** Rust | **Size:** 10.8 KB | **Lines:** 376
 
 **Imports:**
 - `anyhow::{Context, Result, bail}`
@@ -371,7 +395,7 @@ rvw/
 
 ## src/review.rs
 
-**Language:** Rust | **Size:** 3.4 KB | **Lines:** 125
+**Language:** Rust | **Size:** 5.1 KB | **Lines:** 159
 
 **Imports:**
 - `anyhow::{Context, Result}`
@@ -390,11 +414,13 @@ rvw/
 
   `pub fn is_reviewed(&self, path: &str) -> bool`
 
-  `pub fn mark_reviewed(&mut self, path: &str)`
+  `pub fn mark_reviewed(&mut self, path: &str, signature: String)`
 
   `pub fn mark_pending(&mut self, path: &str)`
 
-  `pub fn toggle_reviewed(&mut self, path: &str)`
+  `pub fn toggle_reviewed(&mut self, path: &str, signature: String)`
+
+  `pub fn invalidate_stale(&mut self, current_signatures: &HashMap<String, String>)`
 
 
 `fn state_file_path(repo_path: &Path, branch: &str) -> Result<PathBuf>`

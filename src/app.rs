@@ -132,7 +132,8 @@ impl App {
     pub fn toggle_reviewed(&mut self) -> bool {
         if let Some(file) = self.selected_file() {
             let path = file.path.clone();
-            self.review_state.toggle_reviewed(&path);
+            let signature = file.signature.clone();
+            self.review_state.toggle_reviewed(&path, signature);
             self.review_state.is_reviewed(&path)
         } else {
             false
@@ -140,7 +141,16 @@ impl App {
     }
 
     pub fn mark_reviewed(&mut self, path: &str) {
-        self.review_state.mark_reviewed(path);
+        let Some(signature) = self
+            .repo_info
+            .files
+            .iter()
+            .find(|f| f.path == path)
+            .map(|f| f.signature.clone())
+        else {
+            return;
+        };
+        self.review_state.mark_reviewed(path, signature);
     }
 
     pub fn reviewed_count(&self) -> usize {
@@ -217,7 +227,14 @@ pub async fn run(repo_path: PathBuf, base: Option<&str>, editor: Option<&str>) -
         return Ok(());
     }
 
-    let review_state = ReviewState::load(&repo_path, &repo_info.branch)?;
+    let mut review_state = ReviewState::load(&repo_path, &repo_info.branch)?;
+
+    let current_signatures: HashMap<String, String> = repo_info
+        .files
+        .iter()
+        .map(|f| (f.path.clone(), f.signature.clone()))
+        .collect();
+    review_state.invalidate_stale(&current_signatures);
 
     let editor_cmd = editor
         .map(String::from)

@@ -11,6 +11,10 @@ pub struct ChangedFile {
     pub deletions: usize,
     pub hunks: Vec<Hunk>,
     pub is_binary: bool,
+    /// Fingerprint of the file's content on both sides of the diff
+    /// (`<old_blob_oid>:<new_blob_oid>`). Used to detect when a previously
+    /// reviewed file has changed and should be re-reviewed.
+    pub signature: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -167,6 +171,8 @@ fn collect_changed_files(diff: &git2::Diff<'_>) -> Result<Vec<ChangedFile>> {
 
         let hunks = collect_hunks_for_file(diff, i)?;
 
+        let signature = format!("{}:{}", old_file.id(), new_file.id());
+
         files.push(ChangedFile {
             path,
             old_path,
@@ -175,6 +181,7 @@ fn collect_changed_files(diff: &git2::Diff<'_>) -> Result<Vec<ChangedFile>> {
             deletions,
             hunks,
             is_binary,
+            signature,
         });
     }
 
