@@ -62,7 +62,7 @@ rvw --repo /path/to/repo
 
 ## Installation
 
-Requires Rust 1.85+ and OpenSSL development headers (`openssl-devel` on Fedora, `libssl-dev` on Ubuntu/Debian).
+Requires Rust 1.85+ and a C compiler (used by `cargo` to build the vendored `libgit2`).
 
 ```bash
 cargo install rvw
