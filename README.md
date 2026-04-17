@@ -1,5 +1,7 @@
 # rvw
 
+[![CI](https://github.com/sysheap/rvw/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sysheap/rvw/actions/workflows/ci.yml)
+
 Review git branches in your editor, with full LSP support. A terminal code review tool for people who hate reviewing code inside GitHub or GitLab.
 
 ![rvw screenshot](https://raw.githubusercontent.com/sysheap/rvw/main/assets/screenshot.png)
