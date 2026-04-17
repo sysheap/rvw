@@ -12,7 +12,7 @@ cargo clippy             # linting
 cargo test               # run tests (none yet)
 ```
 
-Requires `openssl-devel` (Fedora) or `libssl-dev` (Ubuntu) for the `git2` crate.
+`git2` is configured with `default-features = false` and `vendored-libgit2`, so it links a statically built libgit2 with no HTTPS/SSH transports. Only a C compiler is needed at build time — no system `libssl`, `libssh2`, or `libgit2`.
 
 ## What This Is
 

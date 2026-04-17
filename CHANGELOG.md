@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Drop the OpenSSL / libssh2 system dependency by disabling `git2`'s default features and vendoring `libgit2`. Installing no longer requires `libssl-dev` / `openssl-devel`.
+
 ## [0.3.0] - 2026-04-09
 
 ### Added
