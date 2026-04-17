@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-04-17
+
 ### Changed
 - Drop the OpenSSL / libssh2 system dependency by disabling `git2`'s default features and vendoring `libgit2`. Installing no longer requires `libssl-dev` / `openssl-devel`.
 
@@ -28,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `rust-toolchain.toml` for reproducible builds (ff40dbe)
 
-[Unreleased]: https://github.com/sysheap/rvw/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/sysheap/rvw/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/sysheap/rvw/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sysheap/rvw/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sysheap/rvw/compare/v0.1.0...v0.2.0
